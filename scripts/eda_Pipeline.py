@@ -7,47 +7,48 @@ import logging
 from abc import ABC, abstractmethod
 import os
 
+
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# 1. Define Interfaces
-class DataLoader(ABC):
+# Interface Definitions
+class DataLoaderInterface(ABC):
     @abstractmethod
     def load(self, file_path):
         pass
 
-class DataSummarizer(ABC):
+class DataSummarizerInterface(ABC):
     @abstractmethod
     def summarize(self, df):
         pass
 
-class NumericalFeatureVisualizer(ABC):
+class NumericalFeatureVisualizerInterface(ABC):
     @abstractmethod
     def visualize(self, df, numerical_cols):
         pass
 
-class CategoricalFeatureVisualizer(ABC):
+class CategoricalFeatureVisualizerInterface(ABC):
     @abstractmethod
     def visualize(self, df, categorical_cols):
         pass
 
-class CorrelationAnalyzer(ABC):
+class CorrelationAnalyzerInterface(ABC):
     @abstractmethod
     def analyze(self, df, numerical_cols):
         pass
 
-class MissingValueIdentifier(ABC):
+class MissingValueIdentifierInterface(ABC):
     @abstractmethod
     def identify(self, df):
         pass
 
-class OutlierDetector(ABC):
+class OutlierDetectorInterface(ABC):
     @abstractmethod
     def detect(self, df, numerical_cols):
         pass
 
-# 2. Concrete Implementations
-class PandasDataLoader(DataLoader):
+# Concrete Implementations
+class DataLoader(DataLoaderInterface):
     def load(self, file_path):
         try:
             logging.info(f'Loading data from: {file_path}')
@@ -69,8 +70,9 @@ class PandasDataLoader(DataLoader):
             logging.error(f'Error loading data: {e}')
             return None
 
-class PandasSummarizer(DataSummarizer):
+class DataSummarizer(DataSummarizerInterface):
     def summarize(self, df):
+        categorical_cols = df.select_dtypes(include='object').columns.tolist()
         logging.info('Performing summary statistics')
         logging.info(f'Number of rows: {df.shape[0]}')
         logging.info(f'Number of columns: {df.shape[1]}')
@@ -78,85 +80,105 @@ class PandasSummarizer(DataSummarizer):
         logging.info(f"First 5 rows of the DataFrame:\n{df.head()}")
         logging.info(f"Summary statistics of numerical features:\n{df.describe()}")
 
-class SeabornHistPlotter(NumericalFeatureVisualizer):
+class NumericalFeatureVisualizer(NumericalFeatureVisualizerInterface):
     def visualize(self, df, numerical_cols):
-        logging.info('Visualizing numerical features distributions')
+        logging.info('Visualizing numerical feature distributions')
         for col in numerical_cols:
             plt.figure(figsize=(8, 5))
             sns.histplot(df[col], kde=True)
             plt.title(f'Distribution of {col}')
             plt.show()
 
-class SeabornCountPlotter(CategoricalFeatureVisualizer):
+class CategoricalFeatureVisualizer(CategoricalFeatureVisualizerInterface):
     def visualize(self, df, categorical_cols):
-        logging.info("Visualizing categorical feature distributions")
+        logging.info('Visualizing categorical feature distributions')
         for col in categorical_cols:
-            plt.figure(figsize=(8,5))
+            plt.figure(figsize=(8, 5))
             sns.countplot(x=df[col])
             plt.title(f'Distribution of {col}')
             plt.show()
 
-class PandasCorrelationAnalyzer(CorrelationAnalyzer):
+class CorrelationAnalyzer(CorrelationAnalyzerInterface):
     def analyze(self, df, numerical_cols):
-         logging.info("Performing correlation analysis")
-         plt.figure(figsize=(10, 8))
-         sns.heatmap(df[numerical_cols].corr(), annot=True, cmap='coolwarm')
-         plt.title('Correlation Matrix')
-         plt.show()
+        logging.info('Performing correlation analysis')
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(df[numerical_cols].corr(), annot=True, cmap='coolwarm')
+        plt.title('Correlation Matrix')
+        plt.show()
 
-class PandasMissingValueIdentifier(MissingValueIdentifier):
+class MissingValueIdentifier(MissingValueIdentifierInterface):
     def identify(self, df):
+        total_rows = len(df)
+        missing_values = df.isnull().sum()
+        missing_percentage = (missing_values / total_rows) * 100
         logging.info('Identifying missing values')
-        logging.info(f'Missing Values:\n{df.isnull().sum()}')
+        logging.info(f'Missing Values:\n{missing_values}')
+        logging.info(f'Percentage of Missing Values:\n{missing_percentage} %')
 
-class SeabornOutlierDetector(OutlierDetector):
+class OutlierDetector(OutlierDetectorInterface):
     def detect(self, df, numerical_cols):
-       logging.info('Detecting outliers')
-       for col in numerical_cols:
+        logging.info('Detecting outliers')
+        for col in numerical_cols:
             plt.figure(figsize=(8, 5))
             sns.boxplot(x=df[col])
             plt.title(f'Box Plot of {col}')
             plt.show()
 
-# 3. Pipeline Class
+# Updated EDAPipeline Class
 class EDAPipeline:
-    def __init__(self, data_loader, data_summarizer, numerical_visualizer, categorical_visualizer, correlation_analyzer, missing_identifier, outlier_detector):
-        self.data_loader = data_loader
-        self.data_summarizer = data_summarizer
-        self.numerical_visualizer = numerical_visualizer
-        self.categorical_visualizer = categorical_visualizer
-        self.correlation_analyzer = correlation_analyzer
-        self.missing_identifier = missing_identifier
-        self.outlier_detector = outlier_detector
+    def __init__(self):
+        self.loader = DataLoader()
+        self.summarizer = DataSummarizer()
+        self.num_visualizer = NumericalFeatureVisualizer()
+        self.cat_visualizer = CategoricalFeatureVisualizer()
+        self.corr_analyzer = CorrelationAnalyzer()
+        self.missing_identifier = MissingValueIdentifier()
+        self.outlier_detector = OutlierDetector()
 
-    def run(self, file_path, load_only=False):
-        logging.info('Starting EDA pipeline')
-        df = self.data_loader.load(file_path)
-        if df is None:
-           return
+    def load_data(self, file_path):
+        return self.loader.load(file_path)
 
-        self.data_summarizer.summarize(df)
+    def summarize_data(self, df):
+        self.summarizer.summarize(df)
+
+    def visualize_numerical_features(self, df):
         numerical_cols = df.select_dtypes(include=np.number).columns.tolist()
+        self.num_visualizer.visualize(df, numerical_cols)
+
+    def visualize_categorical_features(self, df):
         categorical_cols = df.select_dtypes(include='object').columns.tolist()
-        self.numerical_visualizer.visualize(df, numerical_cols)
-        self.categorical_visualizer.visualize(df, categorical_cols)
-        self.correlation_analyzer.analyze(df, numerical_cols)
+        self.cat_visualizer.visualize(df, categorical_cols)
+
+    def analyze_correlation(self, df):
+        numerical_cols = df.select_dtypes(include=np.number).columns.tolist()
+        self.corr_analyzer.analyze(df, numerical_cols)
+
+    def identify_missing_values(self, df):
         self.missing_identifier.identify(df)
+
+    def detect_outliers(self, df):
+        numerical_cols = df.select_dtypes(include=np.number).columns.tolist()
         self.outlier_detector.detect(df, numerical_cols)
-        logging.info('EDA pipeline completed successfully.')
-
 # if __name__ == '__main__':
-#     #Get file path from environment variables, defaults to cs-training.csv
-#     file_path = os.environ.get('DATA_FILE_PATH', 'cs-training.csv')
-#     #Initialize components
-#     data_loader = PandasDataLoader()
-#     data_summarizer = PandasSummarizer()
-#     numerical_visualizer = SeabornHistPlotter()
-#     categorical_visualizer = SeabornCountPlotter()
-#     correlation_analyzer = PandasCorrelationAnalyzer()
-#     missing_identifier = PandasMissingValueIdentifier()
-#     outlier_detector = SeabornOutlierDetector()
+#     # Initialize pipeline
+#     pipeline = EDAPipeline()
 
-#     #Run the pipeline
-#     pipeline = EDAPipeline(data_loader, data_summarizer, numerical_visualizer, categorical_visualizer, correlation_analyzer, missing_identifier, outlier_detector)
-#     pipeline.run(file_path)
+#     # File path setup
+#     file_path = os.environ.get('DATA_FILE_PATH', 'cs-training.csv')
+
+#     # Load data
+#     df_loaded = pipeline.load_data(file_path)
+
+#     if df_loaded is not None:
+#         print(f"Data loaded successfully with shape {df_loaded.shape}")
+
+#         # Run each step
+#         pipeline.summarize_data(df_loaded)
+#         pipeline.visualize_numerical_features(df_loaded)
+#         pipeline.visualize_categorical_features(df_loaded)
+#         pipeline.analyze_correlation(df_loaded)
+#         pipeline.identify_missing_values(df_loaded)
+#         pipeline.detect_outliers(df_loaded)
+#     else:
+#         print("Data loading failed")
+
