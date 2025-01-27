@@ -111,6 +111,13 @@ class MissingValueIdentifier(MissingValueIdentifierInterface):
         total_rows = len(df)
         missing_values = df.isnull().sum()
         missing_percentage = (missing_values / total_rows) * 100
+        missing_summary = pd.DataFrame({
+        'Missing Count': missing_values,
+        'Missing Percentage (%)': missing_percentage
+        }).sort_values(by='Missing Percentage (%)', ascending=False)
+    
+        # Filter for columns with missing values
+        missing_summary = missing_summary[missing_summary['Missing Count'] > 0]
         logging.info('Identifying missing values')
         logging.info(f'Missing Values:\n{missing_values}')
         logging.info(f'Percentage of Missing Values:\n{missing_percentage} %')
