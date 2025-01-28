@@ -14,6 +14,7 @@ class ModelTraining:
     def split_data(self, target_col):
         X = self.data.drop(columns=[target_col, 'TransactionStartTime'])
         y = self.data[target_col]
+        
         return train_test_split(X, y, test_size=0.2, random_state=42)
 
     def train_models(self, X_train, y_train, X_test, y_test):
